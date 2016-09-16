@@ -7,6 +7,7 @@ Article = require '../../models/article'
 Articles = require '../../collections/articles'
 Section = require '../../models/section'
 Sections = require '../../collections/sections'
+Channel = require '../../models/channel'
 embed = require 'embed-video'
 { stringifyJSONForWeb } = require '../../components/util/json.coffee'
 sailthru = require('sailthru-client').createSailthruClient(SAILTHRU_KEY,SAILTHRU_SECRET)
@@ -51,20 +52,22 @@ sailthru = require('sailthru-client').createSailthruClient(SAILTHRU_KEY,SAILTHRU
 @redirectPost = (req, res, next) ->
   res.redirect 301, req.url.replace 'post', 'article'
 
-@section = (req, res, next) ->
-  new Section(id: req.params.slug).fetch
-    error: -> next()
-    success: (section) ->
-      return next() unless req.params.slug is section.get('slug')
-      new Articles().fetch
-        data: section_id: section.get('id'), published: true, limit: 100, sort: '-published_at'
-        error: res.backboneError
-        success: (articles) ->
-          res.locals.sd.SECTION = section
-          email = res.locals.sd.CURRENT_USER?.email
-          subscribedToGI email, section.get('id'), (cb) ->
-            res.locals.sd.MAILCHIMP_SUBSCRIBED = cb
-            res.render 'section', featuredSection: section, articles: articles
+@teamBlogOrSection = (req, res, next) ->
+  Q.allSettled([
+    (channel = new Channel(id: req.params.slug)).fetch()
+    (section = new Section(id: req.params.slug)).fetch()
+  ]).then (results) =>
+    return next() if req.params.slug is channel.get('slug')
+    return next() unless req.params.slug is section.get('slug')
+    new Articles().fetch
+      data: section_id: section.get('id'), published: true, limit: 100, sort: '-published_at'
+      error: res.backboneError
+      success: (articles) ->
+        res.locals.sd.SECTION = section
+        email = res.locals.sd.CURRENT_USER?.email
+        subscribedToGI email, section.get('id'), (cb) ->
+          res.locals.sd.MAILCHIMP_SUBSCRIBED = cb
+          res.render 'section', featuredSection: section, articles: articles
 
 @articles = (req, res, next) ->
   Q.allSettled([

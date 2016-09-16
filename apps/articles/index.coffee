@@ -12,7 +12,7 @@ app.get '/article/:id', routes.article
 app.get '/posts', routes.redirectPost
 app.get '/post/:id', routes.redirectPost
 app.get '/:id/posts', routes.redirectPost
-app.get '/:slug', routes.section
+app.get '/:slug', routes.teamBlogOrSection
 app.post '/gallery-insights/form', routes.form
 app.get '/articles', routes.articles
 app.post '/editorial-signup/form', routes.editorialForm
